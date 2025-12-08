@@ -4,4 +4,10 @@ class FirebaseService {
   static final farolRef = FirebaseDatabase.instance.ref("farol");
   static final turboRef = FirebaseDatabase.instance.ref("turbo");
   static final stealthRef = FirebaseDatabase.instance.ref("stealth");
+  
+  // Novas referencias para navegacao autonoma
+  static final destinoXRef = FirebaseDatabase.instance.ref("destinoX");
+  static final destinoYRef = FirebaseDatabase.instance.ref("destinoY");
+  static final modoDirecaoRef = FirebaseDatabase.instance.ref("modoDirecao");
+  static final cockpitRef = FirebaseDatabase.instance.ref("cockpit");
 }

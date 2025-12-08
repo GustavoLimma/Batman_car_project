@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../../services/firebase_service.dart';
+import 'map_page.dart';
 
 class ControlePage extends StatelessWidget {
   const ControlePage({super.key});
@@ -40,16 +41,16 @@ class ControlePage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Container(
+                  SizedBox(
                     width: 48,
-                    alignment: Alignment.centerRight,
-                    child: const Text(
-                      'Online',
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: IconButton(
+                      icon: const Icon(Icons.map, color: primaryColor, size: 28),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const MapPage()),
+                        );
+                      },
                     ),
                   ),
                 ],
