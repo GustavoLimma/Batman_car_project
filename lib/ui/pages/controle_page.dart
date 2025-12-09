@@ -1,3 +1,5 @@
+import 'package:batman/ui/widgets/controle_widgets.dart';
+import 'package:batman/ui/widgets/joystick_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../../services/firebase_service.dart';
@@ -122,77 +124,21 @@ class ControlePage extends StatelessWidget {
 
                     // Joystick
                     Center(
-                      child: Container(
-                        width: 256,
-                        height: 256,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.black.withOpacity(0.2),
-                          border: Border.all(color: Colors.white.withOpacity(0.1)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: primaryColor.withOpacity(0.1),
-                              blurRadius: 15,
-                              spreadRadius: 0,
-                            ),
-                            BoxShadow(
-                              color: primaryColor.withOpacity(0.1),
-                              blurRadius: 30,
-                              spreadRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              width: 192,
-                              height: 192,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              width: 128,
-                              height: 128,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                            // Joystick Handle
-                            Container(
-                              width: 128,
-                              height: 128,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: primaryColor,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: primaryColor.withOpacity(0.2),
-                                    blurRadius: 10,
-                                    spreadRadius: 0,
-                                  ),
-                                  BoxShadow(
-                                    color: primaryColor.withOpacity(0.2),
-                                    blurRadius: 20,
-                                    spreadRadius: 0,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                      child: JoystickWidget(
+                      size: 256,
+                      innerSize: 128,
+                      primaryColor: primaryColor,
+                      backgroundDark: backgroundDark,
+                      onChanged: (offset) {
+                        final dx = (offset.dx * 100).clamp(-100, 100).toInt();
+                        final dy = (offset.dy * 100).clamp(-100, 100).toInt();
 
+                        FirebaseService.joystickXRef.set(dx);
+                        FirebaseService.joystickYRef.set(dy);
+                      },
+                    ),
+                  ),
+                  
                     const SizedBox(height: 32),
                   ],
                 ),
