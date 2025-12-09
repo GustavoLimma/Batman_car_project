@@ -10,4 +10,7 @@ class FirebaseService {
   static final destinoYRef = FirebaseDatabase.instance.ref("destinoY");
   static final modoDirecaoRef = FirebaseDatabase.instance.ref("modoDirecao");
   static final cockpitRef = FirebaseDatabase.instance.ref("cockpit");
+
+  static final joystickXRef = FirebaseDatabase.instance.ref("joystickX");
+  static final joystickYRef = FirebaseDatabase.instance.ref("joystickY");
 }
