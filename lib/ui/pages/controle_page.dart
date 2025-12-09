@@ -1,4 +1,4 @@
-import 'package:batman/ui/widgets/controle_widgets.dart';
+import 'package:batman/ui/widgets/botao_widget.dart';
 import 'package:batman/ui/widgets/joystick_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -78,7 +78,7 @@ class ControlePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
 
-                    // Action Toggles
+                    // Action Toggles — agora usando BotaoWidget
                     Container(
                       height: 56,
                       padding: const EdgeInsets.all(4),
@@ -89,31 +89,60 @@ class ControlePage extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
+                          // FAROL
                           Expanded(
-                            child: _buildToggleButton(
-                              "Farol",
-                              Icons.light_mode,
-                              FirebaseService.farolRef,
-                              primaryColor,
-                              backgroundDark,
+                            child: StreamBuilder<DatabaseEvent>(
+                              stream: FirebaseService.farolRef.onValue,
+                              builder: (context, snapshot) {
+                                final isOn = (snapshot.data?.snapshot.value ?? false) as bool;
+
+                                return BotaoWidget(
+                                  title: "Farol",
+                                  icon: Icons.light_mode,
+                                  isOn: isOn,
+                                  primaryColor: primaryColor,
+                                  backgroundDark: backgroundDark,
+                                  onPressed: () => FirebaseService.farolRef.set(!isOn),
+                                );
+                              },
                             ),
                           ),
+
+                          // TURBO
                           Expanded(
-                            child: _buildToggleButton(
-                              "Turbo",
-                              Icons.rocket_launch,
-                              FirebaseService.turboRef,
-                              primaryColor,
-                              backgroundDark,
+                            child: StreamBuilder<DatabaseEvent>(
+                              stream: FirebaseService.turboRef.onValue,
+                              builder: (context, snapshot) {
+                                final isOn = (snapshot.data?.snapshot.value ?? false) as bool;
+
+                                return BotaoWidget(
+                                  title: "Turbo",
+                                  icon: Icons.rocket_launch,
+                                  isOn: isOn,
+                                  primaryColor: primaryColor,
+                                  backgroundDark: backgroundDark,
+                                  onPressed: () => FirebaseService.turboRef.set(!isOn),
+                                );
+                              },
                             ),
                           ),
+
+                          // STEALTH
                           Expanded(
-                            child: _buildToggleButton(
-                              "Stealth",
-                              Icons.visibility_off,
-                              FirebaseService.stealthRef,
-                              primaryColor,
-                              backgroundDark,
+                            child: StreamBuilder<DatabaseEvent>(
+                              stream: FirebaseService.stealthRef.onValue,
+                              builder: (context, snapshot) {
+                                final isOn = (snapshot.data?.snapshot.value ?? false) as bool;
+
+                                return BotaoWidget(
+                                  title: "Stealth",
+                                  icon: Icons.visibility_off,
+                                  isOn: isOn,
+                                  primaryColor: primaryColor,
+                                  backgroundDark: backgroundDark,
+                                  onPressed: () => FirebaseService.stealthRef.set(!isOn),
+                                );
+                              },
                             ),
                           ),
                         ],
@@ -125,20 +154,20 @@ class ControlePage extends StatelessWidget {
                     // Joystick
                     Center(
                       child: JoystickWidget(
-                      size: 256,
-                      innerSize: 128,
-                      primaryColor: primaryColor,
-                      backgroundDark: backgroundDark,
-                      onChanged: (offset) {
-                        final dx = (offset.dx * 100).clamp(-100, 100).toInt();
-                        final dy = (offset.dy * 100).clamp(-100, 100).toInt();
+                        size: 256,
+                        innerSize: 128,
+                        primaryColor: primaryColor,
+                        backgroundDark: backgroundDark,
+                        onChanged: (offset) {
+                          final dx = (offset.dx * 100).clamp(-100, 100).toInt();
+                          final dy = (offset.dy * 100).clamp(-100, 100).toInt();
 
-                        FirebaseService.joystickXRef.set(dx);
-                        FirebaseService.joystickYRef.set(dy);
-                      },
+                          FirebaseService.joystickXRef.set(dx);
+                          FirebaseService.joystickYRef.set(dy);
+                        },
+                      ),
                     ),
-                  ),
-                  
+
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -191,56 +220,6 @@ class ControlePage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildToggleButton(
-    String title,
-    IconData icon,
-    DatabaseReference ref,
-    Color primaryColor,
-    Color backgroundDark,
-  ) {
-    return StreamBuilder<DatabaseEvent>(
-      stream: ref.onValue,
-      builder: (context, snapshot) {
-        bool isOn = false;
-        if (snapshot.hasData && snapshot.data?.snapshot.value != null) {
-          isOn = snapshot.data!.snapshot.value as bool;
-        }
-
-        return GestureDetector(
-          onTap: () {
-            ref.set(!isOn);
-          },
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            decoration: BoxDecoration(
-              color: isOn ? primaryColor : Colors.transparent,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isOn ? backgroundDark : Colors.white.withOpacity(0.7),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: isOn ? backgroundDark : Colors.white.withOpacity(0.7),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }
