@@ -65,18 +65,18 @@ class ControlePage extends StatelessWidget {
                 child: Column(
                   children: [
                     // Stats Panel
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard("Velocidade", "88 km/h"),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildStatCard("Bateria", "92%"),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                    // Row(
+                    //   children: [
+                    //     Expanded(
+                    //       child: _buildStatCard("Velocidade", "88 km/h"),
+                    //     ),
+                    //     const SizedBox(width: 16),
+                    //     Expanded(
+                    //       child: _buildStatCard("Bateria", "92%"),
+                    //     ),
+                    //   ],
+                    // ),
+                    // const SizedBox(height: 24),
 
                     // Action Toggles — agora usando BotaoWidget
                     Container(
@@ -148,7 +148,36 @@ class ControlePage extends StatelessWidget {
                         ],
                       ),
                     ),
+                    Container(
+                      height: 56,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: StreamBuilder<DatabaseEvent>(
+                              stream: FirebaseService.cockpitRef.onValue,
+                              builder: (context, snapshot) {
+                                final isOn = (snapshot.data?.snapshot.value ?? false) as bool;
 
+                                return BotaoWidget(
+                                  title: "Cabine",
+                                  icon: Icons.center_focus_weak,
+                                  isOn: isOn,
+                                  primaryColor: primaryColor,
+                                  backgroundDark: backgroundDark,
+                                  onPressed: () => FirebaseService.cockpitRef.set(!isOn),
+                                );
+                              },
+                            ),
+                          ),
+                        ]
+                      )
+                    ),
                     const Spacer(),
 
                     // Joystick
@@ -160,7 +189,7 @@ class ControlePage extends StatelessWidget {
                         backgroundDark: backgroundDark,
                         onChanged: (offset) {
                           final dx = (offset.dx * 100).clamp(-100, 100).toInt();
-                          final dy = (offset.dy * 100).clamp(-100, 100).toInt();
+                          final dy = (-offset.dy * 100).clamp(-100, 100).toInt();
 
                           FirebaseService.joystickXRef.set(dx);
                           FirebaseService.joystickYRef.set(dy);
