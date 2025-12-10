@@ -21,6 +21,10 @@ const char* database_url = "esp32a-4d42c-default-rtdb.firebaseio.com";
 
 #define FAROL_PIN 2
 
+// --- Sensor Ultrassônico ---
+#define TRIG 4
+#define ECHO 5   // Passa pelo divisor 1k + 2k Para ligar o sensor na ESP32 com segurança, conectamos o pino ECHO ao GPIO passando por um resistor de 1k, e do ponto intermediário ligamos um resistor de 2k ao GND, formando um divisor de tensão que reduz os 5V para cerca de 3.3V.
+
 // --- 3. Objetos Firebase e Variáveis ---
 FirebaseData streamData;
 FirebaseAuth auth;
@@ -32,8 +36,26 @@ int joyY = 0;
 
 // --- 4. Função Auxiliar: Controla UM Motor ---
 // Agora recebe também o pinoEnable
+// --- Controle do tempo para medir distância ---
+unsigned long ultimaMedicao = 0;
+const unsigned long intervaloMedicao = 200; // 200ms
+
+// --- Função do Ultrassônico ---
+long medirDistancia() {
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+  long duracao = pulseIn(ECHO, HIGH, 30000); // timeout 30ms
+  long distancia = duracao * 0.034 / 2;
+
+  return distancia; 
+}
+
+// --- Controle dos motores ---
 void acionarMotor(int pinoIn1, int pinoIn2, int pinoEnable, int velocidade) {
-  
   // 1. Controla a VELOCIDADE no pino Enable (0 a 255)
   // abs() garante que o PWM seja sempre positivo
   analogWrite(pinoEnable, abs(velocidade));
@@ -73,7 +95,7 @@ void atualizarRodas() {
   if (abs(motorEsq) < 10) motorEsq = 0;
   if (abs(motorDir) < 10) motorDir = 0;
 
-  // Converte escala de 100 para 255 (PWM do ESP32)
+  // Converte escala de 100 para 255 (PWM do ESP32)  
   int pwmEsq = motorEsq * 2.55;
   int pwmDir = motorDir * 2.55;
 
@@ -105,17 +127,20 @@ void streamCallback(FirebaseStream data) {
   }
 }
 
-void streamTimeoutCallback(bool timeout) { 
-  if(timeout) Serial.println("Stream Timeout - Reconectando..."); 
+void streamTimeoutCallback(bool timeout) {
+  if(timeout) Serial.println("Stream Timeout - Reconectando...");
 }
 
 void setup() {
   Serial.begin(115200);
-  
+
   // Configura todos os pinos como SAÍDA
   pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT); pinMode(ENA, OUTPUT);
   pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT); pinMode(ENB, OUTPUT);
   pinMode(FAROL_PIN, OUTPUT);
+
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -131,9 +156,26 @@ void setup() {
   if (!Firebase.RTDB.beginStream(&streamData, "/")) {
     Serial.printf("Erro Stream: %s\n", streamData.errorReason().c_str());
   }
+
+  Firebase.RTDB.beginStream(&streamData, "/");
   Firebase.RTDB.setStreamCallback(&streamData, streamCallback, streamTimeoutCallback);
 }
 
 void loop() {
-  // Loop vazio para máxima eficiência do Stream
+
+  // --- MEDIÇÃO COM millis() ---
+  unsigned long agora = millis();
+
+  if (agora - ultimaMedicao >= intervaloMedicao) {
+    ultimaMedicao = agora;
+
+    long d = medirDistancia();
+    Firebase.RTDB.setInt(&streamData, "/distancia", d);
+
+    Serial.print("Distancia: ");
+    Serial.print(d);
+    Serial.println(" cm");
+  }
+
+  // loop sempre livre → Firebase Stream fica rápido
 }
