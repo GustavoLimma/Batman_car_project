@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../services/firebase_service.dart';
-import '../widgets/joystick_widget.dart'; // Importe o widget aqui
+import '../widgets/joystick_widget.dart';
 import 'map_page.dart';
 
 class ControlePage extends StatefulWidget {
@@ -69,28 +69,38 @@ class _ControlePageState extends State<ControlePage> {
       )
     );
 
-    if (cmd.contains("ligar luz") || cmd.contains("ligar farol") || cmd.contains("acender farol")) {
-      FirebaseService.farolRef.set(true);
-    } 
-    else if (cmd.contains("desligar luz") || cmd.contains("desligar farol") || cmd.contains("apagar farol")) {
-      FirebaseService.farolRef.set(false);
+    // Lógica para Farol
+    if (cmd.contains("farol") || cmd.contains("luz")) {
+       if (cmd.contains("ligar") || cmd.contains("acender") || cmd.contains("ativar")) {
+          FirebaseService.farolRef.set(true);
+       } else if (cmd.contains("desligar") || cmd.contains("apagar") || cmd.contains("desativar")) {
+          FirebaseService.farolRef.set(false);
+       }
     }
-    else if (cmd.contains("ativar stealth") || cmd.contains("modo stealth")) {
-      FirebaseService.stealthRef.set(true);
-      FirebaseService.turboRef.set(false);
-      FirebaseService.farolRef.set(false);
+
+    // Lógica para Stealth (melhorado para capturar variações fonéticas comuns se necessário, mas focado na palavra chave)
+    if (cmd.contains("stealth") || cmd.contains("stelt") || cmd.contains("estel")) {
+       if (cmd.contains("ativar") || cmd.contains("modo") || cmd.contains("ligar")) {
+          FirebaseService.stealthRef.set(true);
+          FirebaseService.turboRef.set(false);
+          FirebaseService.farolRef.set(false);
+       } else if (cmd.contains("desativar") || cmd.contains("desligar")) {
+          FirebaseService.stealthRef.set(false);
+       }
     }
-    else if (cmd.contains("desativar stealth")) {
-      FirebaseService.stealthRef.set(false);
+
+    // Lógica para Turbo
+    if (cmd.contains("turbo")) {
+       if (cmd.contains("ativar") || cmd.contains("modo") || cmd.contains("ligar")) {
+          FirebaseService.turboRef.set(true);
+          FirebaseService.stealthRef.set(false);
+       } else if (cmd.contains("desativar") || cmd.contains("desligar")) {
+          FirebaseService.turboRef.set(false);
+       }
     }
-    else if (cmd.contains("modo turbo") || cmd.contains("ativar turbo")) {
-      FirebaseService.turboRef.set(true);
-      FirebaseService.stealthRef.set(false);
-    }
-    else if (cmd.contains("desativar turbo")) {
-      FirebaseService.turboRef.set(false);
-    }
-    else if (cmd.contains("frente") || cmd.contains("andar")) {
+
+    // Comandos de Movimento
+    if (cmd.contains("frente") || cmd.contains("andar")) {
       FirebaseService.motorDireitoRef.set(100);
       FirebaseService.motorEsquerdoRef.set(100);
     }
