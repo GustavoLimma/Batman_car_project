@@ -1,24 +1,112 @@
-import 'package:batman/ui/widgets/botao_widget.dart';
-import 'package:batman/ui/widgets/joystick_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../services/firebase_service.dart';
+import '../widgets/joystick_widget.dart'; // Importe o widget aqui
 import 'map_page.dart';
 
-class ControlePage extends StatelessWidget {
+class ControlePage extends StatefulWidget {
   const ControlePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFFF2D00D);
-    const Color backgroundDark = Color(0xFF221F10);
+  State<ControlePage> createState() => _ControlePageState();
+}
 
+class _ControlePageState extends State<ControlePage> {
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+  String _text = 'Pressione o microfone para falar';
+  
+  // Cores
+  static const Color primaryColor = Color(0xFFF2D00D);
+  static const Color backgroundDark = Color(0xFF221F10);
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = stt.SpeechToText();
+  }
+
+  void _listen() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (val) {
+           if (val == 'done' || val == 'notListening') {
+             setState(() => _isListening = false);
+           }
+        },
+        onError: (val) => print('onError: $val'),
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) {
+            setState(() {
+              _text = val.recognizedWords;
+              if (val.finalResult) {
+                _processVoiceCommand(_text);
+              }
+            });
+          },
+          localeId: 'pt_BR',
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
+
+  void _processVoiceCommand(String command) {
+    String cmd = command.toLowerCase();
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Comando reconhecido: $cmd"), 
+        duration: const Duration(milliseconds: 1500),
+        backgroundColor: primaryColor,
+        behavior: SnackBarBehavior.floating,
+      )
+    );
+
+    if (cmd.contains("ligar luz") || cmd.contains("ligar farol") || cmd.contains("acender farol")) {
+      FirebaseService.farolRef.set(true);
+    } 
+    else if (cmd.contains("desligar luz") || cmd.contains("desligar farol") || cmd.contains("apagar farol")) {
+      FirebaseService.farolRef.set(false);
+    }
+    else if (cmd.contains("ativar stealth") || cmd.contains("modo stealth")) {
+      FirebaseService.stealthRef.set(true);
+      FirebaseService.turboRef.set(false);
+      FirebaseService.farolRef.set(false);
+    }
+    else if (cmd.contains("desativar stealth")) {
+      FirebaseService.stealthRef.set(false);
+    }
+    else if (cmd.contains("modo turbo") || cmd.contains("ativar turbo")) {
+      FirebaseService.turboRef.set(true);
+      FirebaseService.stealthRef.set(false);
+    }
+    else if (cmd.contains("desativar turbo")) {
+      FirebaseService.turboRef.set(false);
+    }
+    else if (cmd.contains("frente") || cmd.contains("andar")) {
+      FirebaseService.motorDireitoRef.set(100);
+      FirebaseService.motorEsquerdoRef.set(100);
+    }
+    else if (cmd.contains("parar") || cmd.contains("pare")) {
+      FirebaseService.motorDireitoRef.set(0);
+      FirebaseService.motorEsquerdoRef.set(0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundDark,
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Row(
@@ -64,21 +152,19 @@ class ControlePage extends StatelessWidget {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    // Stats Panel
-                    // Row(
-                    //   children: [
-                    //     Expanded(
-                    //       child: _buildStatCard("Velocidade", "88 km/h"),
-                    //     ),
-                    //     const SizedBox(width: 16),
-                    //     Expanded(
-                    //       child: _buildStatCard("Bateria", "92%"),
-                    //     ),
-                    //   ],
-                    // ),
-                    // const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard("Velocidade", "88 km/h"),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard("Bateria", "92%"),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
 
-                    // Action Toggles — agora usando BotaoWidget
                     Container(
                       height: 56,
                       padding: const EdgeInsets.all(4),
@@ -89,95 +175,37 @@ class ControlePage extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          // FAROL
                           Expanded(
-                            child: StreamBuilder<DatabaseEvent>(
-                              stream: FirebaseService.farolRef.onValue,
-                              builder: (context, snapshot) {
-                                final isOn = (snapshot.data?.snapshot.value ?? false) as bool;
-
-                                return BotaoWidget(
-                                  title: "Farol",
-                                  icon: Icons.light_mode,
-                                  isOn: isOn,
-                                  primaryColor: primaryColor,
-                                  backgroundDark: backgroundDark,
-                                  onPressed: () => FirebaseService.farolRef.set(!isOn),
-                                );
-                              },
+                            child: _buildToggleButton(
+                              "Farol",
+                              Icons.light_mode,
+                              FirebaseService.farolRef,
+                              primaryColor,
+                              backgroundDark,
                             ),
                           ),
-
-                          // TURBO
                           Expanded(
-                            child: StreamBuilder<DatabaseEvent>(
-                              stream: FirebaseService.turboRef.onValue,
-                              builder: (context, snapshot) {
-                                final isOn = (snapshot.data?.snapshot.value ?? false) as bool;
-
-                                return BotaoWidget(
-                                  title: "Turbo",
-                                  icon: Icons.rocket_launch,
-                                  isOn: isOn,
-                                  primaryColor: primaryColor,
-                                  backgroundDark: backgroundDark,
-                                  onPressed: () => FirebaseService.turboRef.set(!isOn),
-                                );
-                              },
+                            child: _buildToggleButton(
+                              "Turbo",
+                              Icons.rocket_launch,
+                              FirebaseService.turboRef,
+                              primaryColor,
+                              backgroundDark,
                             ),
                           ),
-
-                          // STEALTH
                           Expanded(
-                            child: StreamBuilder<DatabaseEvent>(
-                              stream: FirebaseService.stealthRef.onValue,
-                              builder: (context, snapshot) {
-                                final isOn = (snapshot.data?.snapshot.value ?? false) as bool;
-
-                                return BotaoWidget(
-                                  title: "Stealth",
-                                  icon: Icons.visibility_off,
-                                  isOn: isOn,
-                                  primaryColor: primaryColor,
-                                  backgroundDark: backgroundDark,
-                                  onPressed: () => FirebaseService.stealthRef.set(!isOn),
-                                );
-                              },
+                            child: _buildToggleButton(
+                              "Stealth",
+                              Icons.visibility_off,
+                              FirebaseService.stealthRef,
+                              primaryColor,
+                              backgroundDark,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      height: 56,
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white.withOpacity(0.1)),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: StreamBuilder<DatabaseEvent>(
-                              stream: FirebaseService.cockpitRef.onValue,
-                              builder: (context, snapshot) {
-                                final isOn = (snapshot.data?.snapshot.value ?? false) as bool;
 
-                                return BotaoWidget(
-                                  title: "Cabine",
-                                  icon: Icons.center_focus_weak,
-                                  isOn: isOn,
-                                  primaryColor: primaryColor,
-                                  backgroundDark: backgroundDark,
-                                  onPressed: () => FirebaseService.cockpitRef.set(!isOn),
-                                );
-                              },
-                            ),
-                          ),
-                        ]
-                      )
-                    ),
                     const Spacer(),
 
                     // Joystick
@@ -188,11 +216,9 @@ class ControlePage extends StatelessWidget {
                         primaryColor: primaryColor,
                         backgroundDark: backgroundDark,
                         onChanged: (offset) {
-                          final dx = (offset.dx * 100).clamp(-100, 100).toInt();
-                          final dy = (-offset.dy * 100).clamp(-100, 100).toInt();
-
-                          FirebaseService.joystickXRef.set(dx);
-                          FirebaseService.joystickYRef.set(dy);
+                          // Futuramente aqui será implementada a lógica de envio
+                          // de comando manual do joystick para o Firebase.
+                          // Por enquanto, é apenas visual como solicitado.
                         },
                       ),
                     ),
@@ -206,14 +232,18 @@ class ControlePage extends StatelessWidget {
         ),
       ),
       floatingActionButton: SizedBox(
-        width: 64,
-        height: 64,
+        width: 72,
+        height: 72,
         child: FloatingActionButton(
-          onPressed: () {},
-          backgroundColor: primaryColor,
+          onPressed: _listen,
+          backgroundColor: _isListening ? Colors.redAccent : primaryColor,
           elevation: 10,
           shape: const CircleBorder(),
-          child: Icon(Icons.mic, color: backgroundDark, size: 32),
+          child: Icon(
+            _isListening ? Icons.mic : Icons.mic_none, 
+            color: backgroundDark, 
+            size: 36
+          ),
         ),
       ),
     );
@@ -249,6 +279,56 @@ class ControlePage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildToggleButton(
+    String title,
+    IconData icon,
+    DatabaseReference ref,
+    Color primaryColor,
+    Color backgroundDark,
+  ) {
+    return StreamBuilder<DatabaseEvent>(
+      stream: ref.onValue,
+      builder: (context, snapshot) {
+        bool isOn = false;
+        if (snapshot.hasData && snapshot.data?.snapshot.value != null) {
+          isOn = snapshot.data!.snapshot.value as bool;
+        }
+
+        return GestureDetector(
+          onTap: () {
+            ref.set(!isOn);
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            decoration: BoxDecoration(
+              color: isOn ? primaryColor : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isOn ? backgroundDark : Colors.white.withOpacity(0.7),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: isOn ? backgroundDark : Colors.white.withOpacity(0.7),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
